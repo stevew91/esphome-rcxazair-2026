@@ -11,14 +11,6 @@ static const espbt::ESPBTUUID CONTROL_SERVICE_UUID =
 static const espbt::ESPBTUUID CONTROL_CHARACTERISTIC_UUID =
     espbt::ESPBTUUID::from_raw("00010203-0405-0607-0809-0a0b0c0d2b10");
 
-void Rcxazair::dump_config() {
-  LOG_SENSOR("  ", "CO2", this->co2_sensor_);
-  LOG_SENSOR("  ", "Temperature", this->temperature_sensor_);
-  LOG_SENSOR("  ", "Humidity", this->humidity_sensor_);
-  LOG_SENSOR("  ", "TVOC", this->tvoc_sensor_);
-  LOG_SENSOR("  ", "Formaldehyde", this->formaldehyde_sensor_);
-}
-
 void Rcxazair::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if,
                                    esp_ble_gattc_cb_param_t *param) {
   switch (event) {
@@ -29,7 +21,7 @@ void Rcxazair::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gat
                  this->parent_->address_str());
         break;
       }
-      this->handle_ = chr->handle;
+      this->char_handle_ = chr->handle;
       ESP_LOGI(TAG, "[%s] got characteristic!",
                this->parent_->address_str());
 
@@ -42,14 +34,14 @@ void Rcxazair::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gat
     }
 
     case ESP_GATTC_NOTIFY_EVT: {
-      if (param->notify.handle != this->handle_)
+      if (param->notify.handle != this->char_handle_)
         break;
       this->handle_message(param->notify.value, param->notify.value_len);
       break;
     }
 
     case ESP_GATTC_DISCONNECT_EVT: {
-      this->handle_ = 0;
+      this->char_handle_ = 0;
       break;
     }
 
@@ -78,14 +70,14 @@ void Rcxazair::handle_message(uint8_t *payload, uint16_t length) {
 
   switch (message_type) {
     case 0x02: {
-      // Message 0x02: Formaldehyde, TVOC, CO2
+      // Message 0x02: Formaldehyde (CH2O), TVOC, CO2
       if (length < 11) {
         ESP_LOGW(TAG, "Malformed 0x02 message: too short");
         return;
       }
-      if (this->formaldehyde_sensor_ != nullptr) {
+      if (this->ch2o_sensor_ != nullptr) {
         float ch2o = parse_be16(payload + 4) / 100.0f;
-        this->formaldehyde_sensor_->publish_state(ch2o);
+        this->ch2o_sensor_->publish_state(ch2o);
       }
       if (this->tvoc_sensor_ != nullptr) {
         float tvoc = parse_be16(payload + 6) / 100.0f;
@@ -104,13 +96,13 @@ void Rcxazair::handle_message(uint8_t *payload, uint16_t length) {
         ESP_LOGW(TAG, "Malformed 0x03 message: too short");
         return;
       }
-      if (this->temperature_sensor_ != nullptr) {
+      if (this->temp_sensor_ != nullptr) {
         float temp = parse_be16(payload + 4) / 10.0f;
-        this->temperature_sensor_->publish_state(temp);
+        this->temp_sensor_->publish_state(temp);
       }
-      if (this->humidity_sensor_ != nullptr) {
+      if (this->hum_sensor_ != nullptr) {
         float humidity = parse_be16(payload + 6) / 10.0f;
-        this->humidity_sensor_->publish_state(humidity);
+        this->hum_sensor_->publish_state(humidity);
       }
       break;
     }
