@@ -130,7 +130,7 @@ void Rcxazair::handle_message(uint8_t *msg, uint16_t len)
             break;
        default:
         ESP_LOGI(TAG, "[%s] Got unknown message type %x",
-                this->parent_->address_str(), message_type);
+                this->parent_->address_str(), payload[3]);
             break;
     }
 }
