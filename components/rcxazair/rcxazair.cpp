@@ -128,10 +128,9 @@ void Rcxazair::handle_message(uint8_t *msg, uint16_t len)
                 this->pmc_10_0_sensor_->publish_state(pmc_10_0_ugm3);
             }
             break;
-        default:
+       default:
         ESP_LOGI(TAG, "[%s] Got unknown message type %x",
-                this->parent_->address_str().c_str(),
-                type);
+                this->parent_->address_str(), message_type);
             break;
     }
 }
